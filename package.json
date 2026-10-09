@@ -1,0 +1,18 @@
+{
+  "name": "iot-demo-wlw231",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+   "pub": "node publisher.js",
+    "sub": "node subscriber.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^18.0.6",
+    "mqtt": "^5.16.0"
+  }
+}

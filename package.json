@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-   "pub": "node publisher.js",
+    "pub": "node publisher.js",
     "sub": "node subscriber.js"
   },
   "keywords": [],
@@ -13,6 +13,7 @@
   "type": "commonjs",
   "dependencies": {
     "dotenv": "^18.0.6",
+    "express": "^5.3.0",
     "mqtt": "^5.16.0"
   }
 }

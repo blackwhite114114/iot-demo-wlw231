@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌈 温湿度小站 · 卡通版</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Comic Sans MS", "幼圆", YouYuan, "Microsoft YaHei", cursive, sans-serif;
+    background: linear-gradient(180deg, #bde8ff 0%, #fdf6e3 60%, #ffe9f0 100%);
+    min-height: 100vh;
+    padding: 28px;
+    overflow-x: hidden;
+  }
+  /* 漂浮的装饰云朵 */
+  .cloud {
+    position: fixed;
+    font-size: 42px;
+    opacity: 0.8;
+    animation: float 12s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .cloud.c1 { top: 8%;  left: 6%;  animation-delay: 0s; }
+  .cloud.c2 { top: 14%; right: 10%; animation-delay: 3s; font-size: 34px; }
+  .cloud.c3 { bottom: 12%; left: 12%; animation-delay: 6s; font-size: 30px; }
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50%      { transform: translateY(-18px) rotate(3deg); }
+  }
+  header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: 26px;
+    color: #ff6b9d;
+    text-shadow: 2px 2px 0 #fff, 4px 4px 0 rgba(255, 107, 157, 0.25);
+    transform: rotate(-1.5deg);
+  }
+  #status {
+    font-size: 14px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: 3px solid #2d2d2d;
+    background: #fff;
+    color: #888;
+    box-shadow: 3px 3px 0 #2d2d2d;
+    transition: all 0.3s;
+  }
+  #status.online {
+    background: #a5e8a0;
+    color: #1d6b1d;
+    animation: wiggle 1.6s ease-in-out infinite;
+  }
+  #status.offline { background: #ffd6d6; color: #b03030; }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(-2deg); }
+    50%      { transform: rotate(2deg); }
+  }
+  .cards {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: #fffdf7;
+    border: 4px solid #2d2d2d;
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow: 6px 6px 0 #2d2d2d;
+    transition: transform 0.2s;
+  }
+  .card:hover { transform: translate(-2px, -4px) rotate(-1deg); }
+  .card.temp { border-color: #ff8c42; box-shadow: 6px 6px 0 #ff8c42; }
+  .card.humi { border-color: #3ec1d3; box-shadow: 6px 6px 0 #3ec1d3; }
+  .card .label { font-size: 15px; color: #555; margin-bottom: 10px; }
+  .card .value {
+    font-size: 46px;
+    font-weight: 900;
+    display: inline-block;
+    animation: pop 0.4s ease;
+  }
+  .card.temp .value { color: #ff6b35; }
+  .card.humi .value { color: #1f9bb3; }
+  @keyframes pop {
+    0%   { transform: scale(0.7); }
+    70%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+  .card .unit { font-size: 20px; color: #999; margin-left: 4px; }
+  .card .meta { font-size: 13px; color: #aaa; margin-top: 10px; }
+  .chart-box {
+    position: relative;
+    z-index: 1;
+    background: #fffdf7;
+    border: 4px solid #2d2d2d;
+    border-radius: 28px;
+    padding: 22px;
+    box-shadow: 8px 8px 0 rgba(45, 45, 45, 0.9);
+    height: 440px;
+  }
+  .chart-title {
+    font-size: 16px;
+    color: #555;
+    margin-bottom: 10px;
+  }
+  footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    margin-top: 20px;
+    font-size: 13px;
+    color: #999;
+  }
+</style>
+</head>
+<body>
+  <div class="cloud c1">☁️</div>
+  <div class="cloud c2">🌤️</div>
+  <div class="cloud c3">🎈</div>
+
+  <header>
+    <h1>🐣 sensor-001 温湿度小站</h1>
+    <span id="status" class="offline">还没连上哦~</span>
+  </header>
+
+  <div class="cards">
+    <div class="card temp">
+      <div class="label">🌡️ 当前温度</div>
+      <div><span class="value" id="tempValue">--</span><span class="unit">℃</span></div>
+      <div class="meta" id="tempTime">等待数据…</div>
+    </div>
+    <div class="card humi">
+      <div class="label">💧 当前湿度</div>
+      <div><span class="value" id="humiValue">--</span><span class="unit">%</span></div>
+      <div class="meta" id="humiTime">等待数据…</div>
+    </div>
+  </div>
+
+  <div class="chart-box">
+    <div class="chart-title">📈 变化趋势（每 2 秒更新一次）</div>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <footer>~ 数据来自 MQTT 模拟设备 · 卡通版界面 · made with 🍭 ~</footer>
+
+<script>
+  const MAX_POINTS = 120;
+  const statusEl = document.getElementById('status');
+
+  const chart = new Chart(document.getElementById('chart'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: '🌡️ 温度 (℃)',
+          data: [],
+          borderColor: '#ff8c42',
+          backgroundColor: 'rgba(255, 140, 66, 0.2)',
+          yAxisID: 'yTemp',
+          tension: 0.4,
+          borderWidth: 4,
+          pointRadius: 3,
+          pointBackgroundColor: '#ff6b35',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointStyle: 'circle',
+          fill: true,
+        },
+        {
+          label: '💧 湿度 (%)',
+          data: [],
+          borderColor: '#3ec1d3',
+          backgroundColor: 'rgba(62, 193, 211, 0.2)',
+          yAxisID: 'yHumi',
+          tension: 0.4,
+          borderWidth: 4,
+          pointRadius: 3,
+          pointBackgroundColor: '#1f9bb3',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointStyle: 'rectRounded',
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300, easing: 'easeOutBack' },
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          ticks: { color: '#777', maxTicksLimit: 8, font: { family: 'Comic Sans MS' } },
+          grid: { color: 'rgba(45,45,45,0.08)', lineWidth: 2 },
+        },
+        yTemp: {
+          position: 'left',
+          title: { display: true, text: '℃', color: '#ff6b35', font: { size: 14, weight: 'bold' } },
+          ticks: { color: '#ff6b35', font: { family: 'Comic Sans MS' } },
+          grid: { color: 'rgba(45,45,45,0.08)', lineWidth: 2 },
+        },
+        yHumi: {
+          position: 'right',
+          title: { display: true, text: '%', color: '#1f9bb3', font: { size: 14, weight: 'bold' } },
+          ticks: { color: '#1f9bb3', font: { family: 'Comic Sans MS' } },
+          grid: { drawOnChartArea: false },
+        },
+      },
+      plugins: {
+        legend: { labels: { color: '#444', font: { family: 'Comic Sans MS', size: 14 } } },
+        tooltip: {
+          backgroundColor: '#fffdf7',
+          titleColor: '#2d2d2d',
+          bodyColor: '#2d2d2d',
+          borderColor: '#2d2d2d',
+          borderWidth: 3,
+          cornerRadius: 14,
+          padding: 12,
+        },
+      },
+    },
+  });
+
+  function fmtTime(ts) {
+    return new Date(ts).toLocaleTimeString('zh-CN', { hour12: false });
+  }
+
+  function addPoint(d) {
+    chart.data.labels.push(fmtTime(d.ts));
+    chart.data.datasets[0].data.push(d.temperature);
+    chart.data.datasets[1].data.push(d.humidity);
+    if (chart.data.labels.length > MAX_POINTS) {
+      chart.data.labels.shift();
+      chart.data.datasets.forEach((ds) => ds.data.shift());
+    }
+    chart.update();
+
+    const t = fmtTime(d.ts);
+    const tempEl = document.getElementById('tempValue');
+    const humiEl = document.getElementById('humiValue');
+    tempEl.textContent = d.temperature;
+    humiEl.textContent = d.humidity;
+    // 重触发 pop 动画
+    tempEl.style.animation = 'none'; humiEl.style.animation = 'none';
+    void tempEl.offsetWidth;
+    tempEl.style.animation = ''; humiEl.style.animation = '';
+    document.getElementById('tempTime').textContent = '更新于 ' + t;
+    document.getElementById('humiTime').textContent = '更新于 ' + t;
+  }
+
+  // 初始化：拉取历史数据
+  fetch('/api/history')
+    .then((r) => r.json())
+    .then((list) => list.forEach(addPoint))
+    .catch(() => {});
+
+  // SSE 实时推送
+  const es = new EventSource('/api/stream');
+  es.onopen = () => {
+    statusEl.textContent = '✅ 连上啦！';
+    statusEl.className = 'online';
+  };
+  es.onmessage = (e) => addPoint(JSON.parse(e.data));
+  es.onerror = () => {
+    statusEl.textContent = '😢 断线了，重连中…';
+    statusEl.className = 'offline';
+  };
+</script>
+</body>
+</html>

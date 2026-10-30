@@ -4,15 +4,18 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-   "pub": "node publisher.js",
-    "sub": "node subscriber.js"
+    "pub": "node publisher.js",
+    "sub": "node subscriber.js",
+    "server": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "better-sqlite3": "^13.0.3",
     "dotenv": "^18.0.6",
+    "express": "^5.3.0",
     "mqtt": "^5.16.0"
   }
 }

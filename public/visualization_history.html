@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🗂️ 历史数据小栈</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Comic Sans MS", "幼圆", YouYuan, "Microsoft YaHei", cursive, sans-serif;
+    background: linear-gradient(180deg, #d9f2e6 0%, #fdf6e3 55%, #ffe9f0 100%);
+    min-height: 100vh;
+    padding: 28px;
+  }
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 26px; color: #7b5ea7;
+    text-shadow: 2px 2px 0 #fff, 4px 4px 0 rgba(123, 94, 167, 0.2);
+    transform: rotate(-1.5deg);
+  }
+  .home-link {
+    font-size: 14px; color: #555; text-decoration: none;
+    background: #fff; border: 3px solid #2d2d2d; border-radius: 999px;
+    padding: 6px 16px; box-shadow: 3px 3px 0 #2d2d2d;
+  }
+  .home-link:hover { transform: translate(-1px, -2px); }
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+    background: #fffdf7; border: 4px solid #2d2d2d; border-radius: 22px;
+    padding: 14px 18px; box-shadow: 6px 6px 0 #7b5ea7; margin-bottom: 20px;
+  }
+  .toolbar label { font-size: 14px; color: #555; }
+  select, input[type="text"] {
+    font-family: inherit; font-size: 14px; padding: 7px 12px;
+    border: 3px solid #2d2d2d; border-radius: 12px; background: #fff;
+  }
+  button {
+    font-family: inherit; font-size: 14px; font-weight: 700;
+    padding: 8px 20px; border: 3px solid #2d2d2d; border-radius: 999px;
+    background: #ffd166; cursor: pointer; box-shadow: 3px 3px 0 #2d2d2d;
+    transition: transform 0.15s;
+  }
+  button:hover { transform: translate(-1px, -3px); }
+  button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #2d2d2d; }
+  #summary { font-size: 13px; color: #888; margin-left: auto; }
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 16px; margin-bottom: 20px;
+  }
+  .stat {
+    background: #fffdf7; border: 4px solid #2d2d2d; border-radius: 20px;
+    padding: 14px 18px; box-shadow: 5px 5px 0 #2d2d2d;
+  }
+  .stat .k { font-size: 13px; color: #777; }
+  .stat .v { font-size: 24px; font-weight: 900; color: #444; margin-top: 4px; }
+  .chart-box {
+    background: #fffdf7; border: 4px solid #2d2d2d; border-radius: 28px;
+    padding: 22px; box-shadow: 8px 8px 0 rgba(123, 94, 167, 0.8);
+    height: 420px; margin-bottom: 20px;
+  }
+  .chart-title { font-size: 16px; color: #555; margin-bottom: 10px; }
+  table {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    background: #fffdf7; border: 4px solid #2d2d2d; border-radius: 20px;
+    overflow: hidden; box-shadow: 6px 6px 0 #2d2d2d; font-size: 14px;
+  }
+  th { background: #bde8ff; color: #2d2d2d; padding: 10px 14px; text-align: left; }
+  td { padding: 8px 14px; border-top: 2px dashed #ddd; color: #555; }
+  tr:hover td { background: #fff3d6; }
+  .table-box { max-height: 360px; overflow: auto; border-radius: 20px; }
+  footer { text-align: center; margin-top: 20px; font-size: 13px; color: #999; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🗂️ 传感器历史数据小栈</h1>
+    <a class="home-link" href="/">← 回到实时仪表盘</a>
+  </header>
+
+  <div class="toolbar">
+    <label>设备
+      <select id="deviceSel"></select>
+    </label>
+    <label>时间范围
+      <select id="rangeSel">
+        <option value="5">最近 5 分钟</option>
+        <option value="30">最近 30 分钟</option>
+        <option value="120" selected>最近 2 小时</option>
+        <option value="1440">最近 24 小时</option>
+        <option value="0">全部</option>
+      </select>
+    </label>
+    <label>最多点数
+      <input type="text" id="limitInput" value="1000" size="6">
+    </label>
+    <button id="refreshBtn">🔄 查询</button>
+    <label><input type="checkbox" id="autoChk" checked> 自动刷新(10s)</label>
+    <span id="summary">加载中…</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="k">📦 记录条数</div><div class="v" id="stCount">-</div></div>
+    <div class="stat"><div class="k">🌡️ 温度 均值/最高/最低</div><div class="v" id="stTemp">-</div></div>
+    <div class="stat"><div class="k">💧 湿度 均值/最高/最低</div><div class="v" id="stHumi">-</div></div>
+    <div class="stat"><div class="k">🕒 最新数据时间</div><div class="v" id="stLast" style="font-size:16px">-</div></div>
+  </div>
+
+  <div class="chart-box">
+    <div class="chart-title">📈 历史趋势（来自 SQLite 数据库）</div>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div class="table-box">
+    <table>
+      <thead>
+        <tr><th>#</th><th>设备</th><th>上报时间</th><th>温度(℃)</th><th>湿度(%)</th><th>入库时间</th></tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <footer>~ 数据源：/api/query · 存储：sensor-data.db · made with 🍭 ~</footer>
+
+<script>
+  const chart = new Chart(document.getElementById('chart'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: '🌡️ 温度 (℃)', data: [], yAxisID: 'yTemp',
+          borderColor: '#ff8c42', backgroundColor: 'rgba(255,140,66,0.18)',
+          tension: 0.35, borderWidth: 3.5, pointRadius: 2, fill: true,
+        },
+        {
+          label: '💧 湿度 (%)', data: [], yAxisID: 'yHumi',
+          borderColor: '#3ec1d3', backgroundColor: 'rgba(62,193,211,0.18)',
+          tension: 0.35, borderWidth: 3.5, pointRadius: 2, fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: { ticks: { color: '#777', maxTicksLimit: 10 }, grid: { color: 'rgba(45,45,45,0.07)' } },
+        yTemp: { position: 'left', title: { display: true, text: '℃' }, ticks: { color: '#ff6b35' }, grid: { color: 'rgba(45,45,45,0.07)' } },
+        yHumi: { position: 'right', title: { display: true, text: '%' }, ticks: { color: '#1f9bb3' }, grid: { drawOnChartArea: false } },
+      },
+      plugins: {
+        legend: { labels: { color: '#444' } },
+        tooltip: {
+          backgroundColor: '#fffdf7', titleColor: '#2d2d2d', bodyColor: '#2d2d2d',
+          borderColor: '#2d2d2d', borderWidth: 3, cornerRadius: 12,
+        },
+      },
+    },
+  });
+
+  const fmt = (ts) => new Date(ts).toLocaleString('zh-CN', { hour12: false });
+
+  async function loadDevices() {
+    const sel = document.getElementById('deviceSel');
+    try {
+      const list = await (await fetch('/api/devices')).json();
+      sel.innerHTML = '';
+      (list.length ? list : [{ device_id: 'sensor-001' }]).forEach((d) => {
+        const opt = document.createElement('option');
+        opt.value = d.device_id;
+        opt.textContent = `${d.device_id}（${d.count} 条）`;
+        sel.appendChild(opt);
+      });
+    } catch {
+      sel.innerHTML = '<option value="sensor-001">sensor-001</option>';
+    }
+  }
+
+  async function query() {
+    const device = document.getElementById('deviceSel').value;
+    const rangeMin = Number(document.getElementById('rangeSel').value);
+    const limit = Number(document.getElementById('limitInput').value) || 1000;
+    const from = rangeMin > 0 ? Date.now() - rangeMin * 60000 : 0;
+    const params = new URLSearchParams({ device, from, limit });
+    if (rangeMin === 0) params.set('to', Date.now() + 60000); // 全部：放宽上界防边界
+
+    let rows;
+    try {
+      rows = await (await fetch('/api/query?' + params)).json();
+    } catch (e) {
+      document.getElementById('summary').textContent = '😢 查询失败：' + e.message;
+      return;
+    }
+
+    // 图表
+    chart.data.labels = rows.map((r) => fmt(r.ts));
+    chart.data.datasets[0].data = rows.map((r) => r.temperature);
+    chart.data.datasets[1].data = rows.map((r) => r.humidity);
+    chart.update();
+
+    // 统计
+    const temps = rows.map((r) => r.temperature).filter((v) => v != null);
+    const humis = rows.map((r) => r.humidity).filter((v) => v != null);
+    const agg = (arr) => arr.length
+      ? `${(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1)} / ${Math.max(...arr).toFixed(1)} / ${Math.min(...arr).toFixed(1)}`
+      : '-';
+    document.getElementById('stCount').textContent = rows.length;
+    document.getElementById('stTemp').textContent = agg(temps);
+    document.getElementById('stHumi').textContent = agg(humis);
+    document.getElementById('stLast').textContent = rows.length ? fmt(rows[rows.length - 1].ts) : '-';
+    document.getElementById('summary').textContent =
+      `✅ ${rows.length} 条（${rangeMin > 0 ? '最近 ' + rangeMin + ' 分钟' : '全部'}）`;
+
+    // 表格（最近 200 条，倒序）
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = '';
+    rows.slice(-200).reverse().forEach((r, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${rows.length - i}</td><td>${r.device_id}</td><td>${fmt(r.ts)}</td>` +
+        `<td>${r.temperature ?? '-'}</td><td>${r.humidity ?? '-'}</td><td>${r.received_at ?? '-'}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', query);
+  document.getElementById('deviceSel').addEventListener('change', query);
+  document.getElementById('rangeSel').addEventListener('change', query);
+
+  let timer = null;
+  function setupAuto() {
+    clearInterval(timer);
+    if (document.getElementById('autoChk').checked) timer = setInterval(query, 10000);
+  }
+  document.getElementById('autoChk').addEventListener('change', setupAuto);
+
+  (async () => {
+    await loadDevices();
+    await query();
+    setupAuto();
+  })();
+</script>
+</body>
+</html>

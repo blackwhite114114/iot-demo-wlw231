@@ -10,6 +10,11 @@ node_modules/
 *.log
 npm-debug.log*
 
+# SQLite 数据库文件
+*.db
+*.db-wal
+*.db-shm
+
 # 操作系统 / 编辑器
 .DS_Store
 Thumbs.db
